@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= album ? 'Editar' : 'Nuevo' %> álbum - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/vendor/tom-select/dist/css/tom-select.default.min.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1><%= album ? 'Editar álbum' : 'Nuevo álbum' %></h1>
+
+        <% if (error) { %>
+            <div class="alert alert-error"><%= error %></div>
+        <% } %>
+
+        <form method="POST" action="/admin/albums<%= album ? '/' + album.id + '/edit' : '' %>" enctype="multipart/form-data" class="song-form">
+            <div class="form-group">
+                <label for="title">Título *</label>
+                <input type="text" id="title" name="title" value="<%= album ? album.title : '' %>" required>
+            </div>
+
+            <div class="form-group">
+                <label for="artist_id">Artista (opcional)</label>
+                <select id="artist_id" name="artist_id" placeholder="Elige un artista">
+                    <option value="">-- Sin artista --</option>
+                    <% artists.forEach(a => { %>
+                        <option value="<%= a.id %>" <%= album && album.artist_id === a.id ? 'selected' : '' %>><%= a.name %></option>
+                    <% }); %>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="cover">Carátula del álbum (opcional)</label>
+                <input type="file" id="cover" name="cover" accept="image/jpeg,image/png" data-preview-target="#new-cover-preview">
+                <small>Se redimensionará a 300x300 píxeles.</small>
+
+                <% if (album && album.cover) { %>
+                    <div class="resolved-cover-box">
+                        <h3>Cover actual del álbum</h3>
+                        <img src="/uploads/covers/<%= album.cover %>" alt="Cover del álbum" class="resolved-cover-img">
+                    </div>
+                <% } %>
+
+                <div id="new-cover-preview" class="new-cover-preview"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Guardar</button>
+                <a href="/admin/albums" class="btn">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="/js/cover-preview.js"></script>
+    <script src="/vendor/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="/js/tom-select-init.js"></script>
+</body>
+</html>

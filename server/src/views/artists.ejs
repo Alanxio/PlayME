@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artistas - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1>Artistas <span class="badge"><%= total %></span></h1>
+
+        <div class="actions">
+            <a href="/admin/artists/new" class="btn btn-primary">+ Nuevo artista</a>
+        </div>
+
+        <% if (artists.length === 0) { %>
+            <p class="empty">No hay artistas. <a href="/admin/artists/new">Crea el primero</a> o súbelo desde los metadatos de una canción.</p>
+        <% } else { %>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Canciones</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% artists.forEach(artist => { %>
+                        <tr>
+                            <td><%= artist.id %></td>
+                            <td><%= artist.name %></td>
+                            <td><%= artist.song_count %></td>
+                            <td class="actions-cell">
+                                <a href="/admin/artists/<%= artist.id %>/edit" class="btn btn-small">Editar</a>
+                                <form method="POST" action="/admin/artists/<%= artist.id %>/delete" class="inline-form" onsubmit="return confirm('¿Eliminar este artista? Las canciones quedarán sin artista.');">
+                                    <button type="submit" class="btn btn-small btn-danger">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+
+            <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <% if (page > 0) { %>
+                        <a href="/admin/artists?page=<%= page - 1 %>" class="btn btn-small">← Anterior</a>
+                    <% } %>
+                    <span>Página <%= page + 1 %> de <%= totalPages %></span>
+                    <% if (page < totalPages - 1) { %>
+                        <a href="/admin/artists?page=<%= page + 1 %>" class="btn btn-small">Siguiente →</a>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } %>
+    </div>
+</body>
+</html>

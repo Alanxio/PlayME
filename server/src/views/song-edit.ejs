@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar canción - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/vendor/tom-select/dist/css/tom-select.default.min.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1>Editar canción #<%= song.id %></h1>
+
+        <% if (error) { %>
+            <div class="alert alert-error"><%= error %></div>
+        <% } %>
+
+        <% const resolvedCover = resolveSongCover(song); %>
+        <div class="resolved-cover-box">
+            <h3>Cover resuelto</h3>
+            <img src="/uploads/covers/<%= resolvedCover.filename %>" alt="Cover resuelto" class="resolved-cover-img">
+            <p class="resolved-cover-label">
+                <span class="cover-icon"><%= getCoverIcon(resolvedCover.origin) %></span>
+                <%= resolvedCover.label %>
+            </p>
+        </div>
+
+        <form method="POST" action="/admin/songs/<%= song.id %>/edit" enctype="multipart/form-data" class="song-form">
+            <div class="form-group">
+                <label for="audio">Reemplazar archivo de audio</label>
+                <input type="file" id="audio" name="audio" accept="audio/*">
+                <small>Archivo actual: <%= song.filename %> (<%= song.mime_type || 'audio/mpeg' %>)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="title">Título</label>
+                <input type="text" id="title" name="title" value="<%= song.title %>" required>
+            </div>
+
+            <div class="form-group">
+                <label for="artist">Artista</label>
+                <select id="artist" name="artist" placeholder="Escribe o elige un artista">
+                    <option value=""></option>
+                    <% artists.forEach(a => { %>
+                        <option value="<%= a.name %>" <%= song.artist === a.name ? 'selected' : '' %>><%= a.name %></option>
+                    <% }); %>
+                </select>
+                <small>Si no existe, se creará automáticamente.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="album">Álbum</label>
+                <select id="album" name="album" placeholder="Escribe o elige un álbum">
+                    <option value=""></option>
+                    <% albums.forEach(a => { %>
+                        <option value="<%= a.title %>" <%= song.album === a.title ? 'selected' : '' %>><%= a.title %></option>
+                    <% }); %>
+                </select>
+                <small>Si no existe, se creará automáticamente.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="duration">Duración (segundos)</label>
+                <input type="number" id="duration" name="duration" min="0" value="<%= song.duration || '' %>">
+            </div>
+
+            <div class="form-group">
+                <label for="cover">Reemplazar carátula</label>
+                <input type="file" id="cover" name="cover" accept="image/jpeg,image/png" data-preview-target="#new-cover-preview">
+                <small>Se redimensionará a 300x300 píxeles.</small>
+                <div id="new-cover-preview" class="new-cover-preview"></div>
+                <% if (song.cover) { %>
+                    <div class="current-cover">
+                        <small>Carátula propia actual de la canción:</small>
+                        <img src="/uploads/covers/<%= song.cover %>" alt="Cover" width="80">
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <a href="/admin/songs" class="btn">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="/js/metadata-preview.js"></script>
+    <script src="/js/cover-preview.js"></script>
+    <script src="/vendor/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="/js/tom-select-init.js"></script>
+</body>
+</html>

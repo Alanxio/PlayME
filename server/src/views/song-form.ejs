@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva canción - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/vendor/tom-select/dist/css/tom-select.default.min.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1>Subir nueva canción</h1>
+
+        <% if (error) { %>
+            <div class="alert alert-error"><%= error %></div>
+        <% } %>
+
+        <form method="POST" action="/admin/songs" enctype="multipart/form-data" class="song-form">
+            <div class="form-group">
+                <label for="audio">Archivo de audio *</label>
+                <input type="file" id="audio" name="audio" accept="audio/*" required>
+                <small>Formatos soportados: MP3, WAV, AAC, M4A, AMR, MIDI. Los metadatos se usarán para autorellenar los campos.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="title">Título</label>
+                <input type="text" id="title" name="title" placeholder="Se autorellena desde metadatos">
+            </div>
+
+            <div class="form-group">
+                <label for="artist">Artista</label>
+                <select id="artist" name="artist" placeholder="Escribe o elige un artista">
+                    <option value=""></option>
+                    <% artists.forEach(a => { %>
+                        <option value="<%= a.name %>"><%= a.name %></option>
+                    <% }); %>
+                </select>
+                <small>Si no existe, se creará automáticamente.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="album">Álbum</label>
+                <select id="album" name="album" placeholder="Escribe o elige un álbum">
+                    <option value=""></option>
+                    <% albums.forEach(a => { %>
+                        <option value="<%= a.title %>"><%= a.title %></option>
+                    <% }); %>
+                </select>
+                <small>Si no existe, se creará automáticamente.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="duration">Duración (segundos)</label>
+                <input type="number" id="duration" name="duration" min="0" placeholder="Se autorellena desde metadatos">
+            </div>
+
+            <div class="form-group">
+                <label for="cover">Carátula (opcional)</label>
+                <input type="file" id="cover" name="cover" accept="image/jpeg,image/png">
+                <small>Se redimensionará a 300x300 píxeles. Si el archivo de audio tiene carátula incrustada, se mostrará arriba.</small>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Guardar canción</button>
+                <a href="/admin/songs" class="btn">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="/js/metadata-preview.js"></script>
+    <script src="/vendor/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="/js/tom-select-init.js"></script>
+</body>
+</html>

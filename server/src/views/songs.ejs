@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canciones - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1>Canciones <span class="badge"><%= total %></span></h1>
+
+        <div class="actions">
+            <a href="/admin/songs/new" class="btn btn-primary">+ Nueva canción</a>
+        </div>
+
+        <% if (songs.length === 0) { %>
+            <p class="empty">No hay canciones. <a href="/admin/songs/new">Sube la primera</a>.</p>
+        <% } else { %>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Artista</th>
+                        <th>Álbum</th>
+                        <th>Formato</th>
+                        <th>Duración</th>
+                        <th>Cover</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% songs.forEach(song => { %>
+                        <% const coverInfo = resolveSongCover(song); %>
+                        <tr>
+                            <td><%= song.id %></td>
+                            <td><%= song.title %></td>
+                            <td><%= song.artist || '-' %></td>
+                            <td><%= song.album || '-' %></td>
+                            <td><%= song.mime_type ? song.mime_type.replace('audio/', '') : 'mp3' %></td>
+                            <td><%= song.duration ? song.duration + 's' : '-' %></td>
+                            <td>
+                                <span class="cover-icon" title="<%= coverInfo.label %>">
+                                    <%= getCoverIcon(coverInfo.origin) %>
+                                </span>
+                            </td>
+                            <td class="actions-cell">
+                                <a href="/admin/songs/<%= song.id %>/edit" class="btn btn-small">Editar</a>
+                                <form method="POST" action="/admin/songs/<%= song.id %>/delete" class="inline-form" onsubmit="return confirm('¿Eliminar esta canción?');">
+                                    <button type="submit" class="btn btn-small btn-danger">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+
+            <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <% if (page > 0) { %>
+                        <a href="/admin/songs?page=<%= page - 1 %>" class="btn btn-small">← Anterior</a>
+                    <% } %>
+                    <span>Página <%= page + 1 %> de <%= totalPages %></span>
+                    <% if (page < totalPages - 1) { %>
+                        <a href="/admin/songs?page=<%= page + 1 %>" class="btn btn-small">Siguiente →</a>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } %>
+    </div>
+</body>
+</html>

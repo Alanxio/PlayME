@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= artist ? 'Editar' : 'Nuevo' %> artista - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1><%= artist ? 'Editar artista' : 'Nuevo artista' %></h1>
+
+        <% if (error) { %>
+            <div class="alert alert-error"><%= error %></div>
+        <% } %>
+
+        <form method="POST" action="/admin/artists<%= artist ? '/' + artist.id + '/edit' : '' %>" class="song-form">
+            <div class="form-group">
+                <label for="name">Nombre *</label>
+                <input type="text" id="name" name="name" value="<%= artist ? artist.name : '' %>" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Guardar</button>
+                <a href="/admin/artists" class="btn">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

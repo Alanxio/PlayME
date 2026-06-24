@@ -1,0 +1,171 @@
+package playme;
+
+import javax.microedition.rms.RecordStore;
+import javax.microedition.rms.RecordStoreException;
+
+/**
+ * Gestiona ajustes persistentes usando RMS (Record Management System).
+ * Almacena todo en un unico registro como cadena delimitada por pipes.
+ */
+public class Settings {
+
+    // Repeticion
+    public static final int REPEAT_OFF = 0;
+    public static final int REPEAT_ONE = 1;
+    public static final int REPEAT_ALL = 2;
+
+    // Ecualizador
+    public static final int EQ_NORMAL = 0;
+    public static final int EQ_BASS = 1;
+    public static final int EQ_ROCK = 2;
+    public static final int EQ_POP = 3;
+    public static final int EQ_CLASSIC = 4;
+
+    // Tema
+    public static final int THEME_AERO = 0;
+    public static final int THEME_DARK = 1;
+    public static final int THEME_NOKIA = 2;
+
+    // Calidad streaming
+    public static final int QUALITY_32 = 32;
+    public static final int QUALITY_64 = 64;
+    public static final int QUALITY_128 = 128;
+
+    // Precarga
+    public static final int PRELOAD_NONE = 0;
+    public static final int PRELOAD_ONE = 1;
+    public static final int PRELOAD_TWO = 2;
+
+    private static final String STORE_NAME = "PlayMESettings";
+
+    // Valores actuales
+    public int repeat = REPEAT_OFF;
+    public boolean shuffle = false;
+    public int equalizer = EQ_NORMAL;
+    public int theme = THEME_AERO;
+    public int quality = QUALITY_64;
+    public int preload = PRELOAD_NONE;
+    public boolean showCovers = true;
+    public String serverUrl = "http://192.168.1.100:3000";
+    public int volume = 80;
+
+    // Labels para la UI
+    public static final String[] REPEAT_LABELS = {"Desactivada", "Una cancion", "Toda lista"};
+    public static final String[] EQ_LABELS = {"Normal", "Bass Boost", "Rock", "Pop", "Clasica"};
+    public static final String[] THEME_LABELS = {"Aero Vista", "Oscuro", "Nokia Azul"};
+    public static final String[] QUALITY_LABELS = {"32 kbps", "64 kbps", "128 kbps"};
+    public static final int[] QUALITY_VALUES = {32, 64, 128};
+    public static final String[] PRELOAD_LABELS = {"Ninguna", "Siguiente", "Dos canciones"};
+    public static final String[] BOOL_LABELS = {"Si", "No"};
+
+    public Settings() {
+        load();
+    }
+
+    /** Cargar desde RMS */
+    public void load() {
+        RecordStore rs = null;
+        try {
+            rs = RecordStore.openRecordStore(STORE_NAME, false);
+            byte[] data = rs.getRecord(1);
+            if (data != null) {
+                String s = new String(data, "UTF-8");
+                parse(s);
+            }
+        } catch (Exception e) {
+            // Primer uso o datos corruptos - usar defaults
+        } finally {
+            if (rs != null) {
+                try { rs.closeRecordStore(); } catch (Exception e) {}
+            }
+        }
+    }
+
+    /** Guardar en RMS */
+    public void save() {
+        RecordStore rs = null;
+        try {
+            // Borrar y recrear para simplificar
+            try {
+                RecordStore.deleteRecordStore(STORE_NAME);
+            } catch (RecordStoreException e) {}
+
+            rs = RecordStore.openRecordStore(STORE_NAME, true);
+            String s = serialize();
+            byte[] data = s.getBytes("UTF-8");
+            rs.addRecord(data, 0, data.length);
+        } catch (Exception e) {
+            // Error guardando - no critical
+        } finally {
+            if (rs != null) {
+                try { rs.closeRecordStore(); } catch (Exception e) {}
+            }
+        }
+    }
+
+    private String serialize() {
+        StringBuffer sb = new StringBuffer();
+        sb.append(repeat).append('|');
+        sb.append(shuffle ? 1 : 0).append('|');
+        sb.append(equalizer).append('|');
+        sb.append(theme).append('|');
+        sb.append(quality).append('|');
+        sb.append(preload).append('|');
+        sb.append(showCovers ? 1 : 0).append('|');
+        sb.append(serverUrl).append('|');
+        sb.append(volume);
+        return sb.toString();
+    }
+
+    private void parse(String s) {
+        try {
+            int[] pipes = new int[9];
+            int count = 0;
+            int pos = 0;
+            // Encontrar posiciones de los pipes
+            while (count < 8 && pos < s.length()) {
+                int p = s.indexOf('|', pos);
+                if (p < 0) break;
+                pipes[count] = p;
+                count++;
+                pos = p + 1;
+            }
+            if (count < 8) return; // Datos incompletos
+
+            repeat = parseInt(s.substring(0, pipes[0]));
+            shuffle = parseInt(s.substring(pipes[0] + 1, pipes[1])) == 1;
+            equalizer = parseInt(s.substring(pipes[1] + 1, pipes[2]));
+            theme = parseInt(s.substring(pipes[2] + 1, pipes[3]));
+            quality = parseInt(s.substring(pipes[3] + 1, pipes[4]));
+            preload = parseInt(s.substring(pipes[4] + 1, pipes[5]));
+            showCovers = parseInt(s.substring(pipes[5] + 1, pipes[6])) == 1;
+            serverUrl = s.substring(pipes[6] + 1, pipes[7]);
+            volume = parseInt(s.substring(pipes[7] + 1));
+        } catch (Exception e) {
+            // Datos corruptos - mantener defaults
+        }
+    }
+
+    private int parseInt(String s) {
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** Obtiene el indice de calidad actual en el array QUALITY_VALUES */
+    public int getQualityIndex() {
+        for (int i = 0; i < QUALITY_VALUES.length; i++) {
+            if (QUALITY_VALUES[i] == quality) return i;
+        }
+        return 1; // default 64
+    }
+
+    /** Establece calidad por indice */
+    public void setQualityByIndex(int idx) {
+        if (idx >= 0 && idx < QUALITY_VALUES.length) {
+            quality = QUALITY_VALUES[idx];
+        }
+    }
+}

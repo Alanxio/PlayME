@@ -1,0 +1,9 @@
+MIDlet-1: PlayME, , playme.MusicPlayerMIDlet
+MIDlet-Jar-Size: 54874
+MIDlet-Jar-URL: PlayME.jar
+MIDlet-Name: PlayME
+MIDlet-Permissions: javax.microedition.io.Connector.http
+MIDlet-Vendor: alanxio
+MIDlet-Version: 1.0.0
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0

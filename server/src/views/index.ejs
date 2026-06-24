@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 PlayME MediaServer</h1>
+
+        <div class="stats">
+            <div class="stat-card">
+                <strong><%= stats.songs %></strong>
+                <span>Canciones</span>
+            </div>
+            <div class="stat-card">
+                <strong><%= stats.artists %></strong>
+                <span>Artistas</span>
+            </div>
+            <div class="stat-card">
+                <strong><%= stats.albums %></strong>
+                <span>Álbumes</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/admin" class="btn btn-primary">Panel de administración</a>
+            <a href="/catalog?page=0&size=5" class="btn">Ver API /catalog</a>
+        </div>
+
+        <h2>API Endpoints</h2>
+        <ul>
+            <li><a href="/catalog?page=0&size=5">/catalog?page=0&size=5</a></li>
+            <li><a href="/catalog/count">/catalog/count</a></li>
+            <li><a href="/catalog/artists">/catalog/artists</a></li>
+            <li><a href="/catalog/albums">/catalog/albums</a></li>
+            <li><a href="/song/1">/song/1</a></li>
+        </ul>
+    </div>
+</body>
+</html>

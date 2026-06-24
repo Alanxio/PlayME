@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Álbumes - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1>Álbumes <span class="badge"><%= total %></span></h1>
+
+        <div class="actions">
+            <a href="/admin/albums/new" class="btn btn-primary">+ Nuevo álbum</a>
+        </div>
+
+        <% if (albums.length === 0) { %>
+            <p class="empty">No hay álbumes. <a href="/admin/albums/new">Crea el primero</a> o súbelo desde los metadatos de una canción.</p>
+        <% } else { %>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Artista</th>
+                        <th>Canciones</th>
+                        <th>Cover</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% albums.forEach(album => { %>
+                        <tr>
+                            <td><%= album.id %></td>
+                            <td><%= album.title %></td>
+                            <td><%= album.artist_name || '-' %></td>
+                            <td><%= album.song_count %></td>
+                            <td>
+                                <span class="cover-icon" title="<%= album.cover ? 'Tiene cover propio' : 'Sin cover' %>">
+                                    <%= album.cover ? '🖼️' : '❌' %>
+                                </span>
+                            </td>
+                            <td class="actions-cell">
+                                <a href="/admin/albums/<%= album.id %>/edit" class="btn btn-small">Editar</a>
+                                <form method="POST" action="/admin/albums/<%= album.id %>/delete" class="inline-form" onsubmit="return confirm('¿Eliminar este álbum?');">
+                                    <button type="submit" class="btn btn-small btn-danger">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+
+            <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <% if (page > 0) { %>
+                        <a href="/admin/albums?page=<%= page - 1 %>" class="btn btn-small">← Anterior</a>
+                    <% } %>
+                    <span>Página <%= page + 1 %> de <%= totalPages %></span>
+                    <% if (page < totalPages - 1) { %>
+                        <a href="/admin/albums?page=<%= page + 1 %>" class="btn btn-small">Siguiente →</a>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } %>
+    </div>
+</body>
+</html>

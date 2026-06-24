@@ -1,0 +1,347 @@
+/**
+ * PlayME MediaServer
+ * 
+ * Servidor HTTP que sirve el catálogo de música y archivos de audio
+ * para la aplicación J2ME PlayME.
+ * 
+ * Uso:
+ *   1. Coloca tus archivos MP3 en la carpeta "music/"
+ *   2. Coloca portadas JPEG (64x64 recomendado) en "covers/"
+ *   3. Edita catalog.json con la información de tus canciones
+ *   4. Ejecuta: node server.js
+ *   5. Configura la IP del servidor en la app PlayME
+ * 
+ * Endpoints:
+ *   GET /catalog?page=0&size=20         - Lista paginada
+ *   GET /catalog?artist=X&page=0        - Filtrar por artista
+ *   GET /catalog?album=X&page=0         - Filtrar por álbum
+ *   GET /catalog?search=X&page=0        - Buscar por texto
+ *   GET /catalog/count                  - Total de canciones
+ *   GET /catalog/artists                - Lista de artistas
+ *   GET /catalog/albums                 - Lista de álbumes
+ *   GET /song/:id                       - Info de una canción
+ *   GET /cover/:filename                - Imagen de portada
+ *   GET /stream/:id?quality=64          - Stream de audio
+ */
+
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const url = require('url');
+
+const PORT = 3000;
+const MUSIC_DIR = path.join(__dirname, 'music');
+const COVERS_DIR = path.join(__dirname, 'covers');
+const CATALOG_FILE = path.join(__dirname, 'catalog.json');
+
+// Crear directorios si no existen
+[MUSIC_DIR, COVERS_DIR].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// Cargar catálogo
+let catalog = [];
+
+function loadCatalog() {
+    try {
+        if (fs.existsSync(CATALOG_FILE)) {
+            const data = fs.readFileSync(CATALOG_FILE, 'utf8');
+            catalog = JSON.parse(data);
+            console.log(`Catálogo cargado: ${catalog.length} canciones`);
+        } else {
+            // Crear catálogo de ejemplo
+            catalog = generateSampleCatalog();
+            fs.writeFileSync(CATALOG_FILE, JSON.stringify(catalog, null, 2));
+            console.log(`Catálogo de ejemplo creado: ${catalog.length} canciones`);
+        }
+    } catch (err) {
+        console.error('Error cargando catálogo:', err.message);
+        catalog = [];
+    }
+}
+
+// Genera catálogo de ejemplo para testing
+function generateSampleCatalog() {
+    const artists = [
+        'Nova', 'Lunar', 'Solaris', 'Nebula', 'Aurora',
+        'Zenith', 'Cascade', 'Prism', 'Vertex', 'Echo'
+    ];
+    const albums = [
+        'Sky', 'Horizon', 'Drift', 'Pulse', 'Bloom',
+        'Waves', 'Crystal', 'Neon', 'Orbit', 'Spectrum'
+    ];
+    const adjectives = [
+        'Dreamscape', 'Eclipse', 'Forever', 'Horizon', 'Infinity',
+        'Journey', 'Kaleidoscope', 'Luminous', 'Midnight', 'Northern',
+        'Obsidian', 'Paradise', 'Quantum', 'Radiance', 'Starlight',
+        'Twilight', 'Utopia', 'Velocity', 'Wanderer', 'Xenith'
+    ];
+
+    const songs = [];
+    let id = 1;
+
+    for (let a = 0; a < artists.length; a++) {
+        for (let al = 0; al < 4; al++) {
+            const albumIdx = (a + al) % albums.length;
+            for (let s = 0; s < 10; s++) {
+                const titleIdx = (a * 10 + al * 5 + s) % adjectives.length;
+                const suffix = s > 0 ? ' ' + (s + 1) : '';
+                songs.push({
+                    id: id,
+                    title: adjectives[titleIdx] + suffix,
+                    artist: artists[a],
+                    album: albums[albumIdx],
+                    duration: 120 + Math.floor(Math.random() * 180),
+                    cover: `cover${(albumIdx % 5) + 1}.jpg`,
+                    url: `song${id}.mp3`
+                });
+                id++;
+            }
+        }
+    }
+
+    return songs;
+}
+
+// Servidor HTTP
+const server = http.createServer((req, res) => {
+    const parsedUrl = url.parse(req.url, true);
+    const pathname = parsedUrl.pathname;
+    const query = parsedUrl.query;
+
+    // CORS headers (para testing con navegador)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    console.log(`${req.method} ${pathname}`);
+
+    // --- Rutas ---
+
+    // GET /catalog
+    if (pathname === '/catalog') {
+        let filtered = [...catalog];
+
+        // Filtros
+        if (query.artist) {
+            filtered = filtered.filter(s => 
+                s.artist.toLowerCase() === query.artist.toLowerCase()
+            );
+        }
+        if (query.album) {
+            filtered = filtered.filter(s => 
+                s.album.toLowerCase() === query.album.toLowerCase()
+            );
+        }
+        if (query.search) {
+            const searchLower = query.search.toLowerCase();
+            filtered = filtered.filter(s =>
+                s.title.toLowerCase().includes(searchLower) ||
+                s.artist.toLowerCase().includes(searchLower) ||
+                s.album.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Paginación
+        const page = parseInt(query.page) || 0;
+        const size = parseInt(query.size) || 20;
+        const start = page * size;
+        const paged = filtered.slice(start, start + size);
+
+        sendJSON(res, {
+            total: filtered.length,
+            page: page,
+            songs: paged
+        });
+        return;
+    }
+
+    // GET /catalog/count
+    if (pathname === '/catalog/count') {
+        sendJSON(res, { total: catalog.length });
+        return;
+    }
+
+    // GET /catalog/artists
+    if (pathname === '/catalog/artists') {
+        const artists = [...new Set(catalog.map(s => s.artist))].sort();
+        sendJSON(res, artists);
+        return;
+    }
+
+    // GET /catalog/albums
+    if (pathname === '/catalog/albums') {
+        const albums = [...new Set(catalog.map(s => s.album))].sort();
+        sendJSON(res, albums);
+        return;
+    }
+
+    // GET /song/:id
+    const songMatch = pathname.match(/^\/song\/(\d+)$/);
+    if (songMatch) {
+        const id = parseInt(songMatch[1]);
+        const song = catalog.find(s => s.id === id);
+        if (song) {
+            sendJSON(res, song);
+        } else {
+            res.writeHead(404);
+            res.end('Song not found');
+        }
+        return;
+    }
+
+    // GET /cover/:filename
+    const coverMatch = pathname.match(/^\/cover\/(.+)$/);
+    if (coverMatch) {
+        const filename = decodeURIComponent(coverMatch[1]);
+        const filepath = path.join(COVERS_DIR, path.basename(filename));
+
+        if (fs.existsSync(filepath)) {
+            const data = fs.readFileSync(filepath);
+            res.writeHead(200, {
+                'Content-Type': 'image/jpeg',
+                'Content-Length': data.length
+            });
+            res.end(data);
+        } else {
+            // Generar portada placeholder de 64x64 (1x1 pixel JPEG mínimo)
+            res.writeHead(404);
+            res.end('Cover not found');
+        }
+        return;
+    }
+
+    // GET /stream/:id
+    const streamMatch = pathname.match(/^\/stream\/(\d+)$/);
+    if (streamMatch) {
+        const id = parseInt(streamMatch[1]);
+        const song = catalog.find(s => s.id === id);
+
+        if (!song) {
+            res.writeHead(404);
+            res.end('Song not found');
+            return;
+        }
+
+        const filepath = path.join(MUSIC_DIR, song.url);
+
+        if (fs.existsSync(filepath)) {
+            const stat = fs.statSync(filepath);
+            res.writeHead(200, {
+                'Content-Type': 'audio/mpeg',
+                'Content-Length': stat.size
+            });
+            const stream = fs.createReadStream(filepath);
+            stream.pipe(res);
+        } else {
+            // Si no hay archivo real, generar silencio de prueba
+            // (para testing sin archivos MP3 reales)
+            res.writeHead(200, {
+                'Content-Type': 'audio/mpeg',
+                'Content-Length': 0
+            });
+            res.end();
+        }
+        return;
+    }
+
+    // Ruta raíz - info del servidor
+    if (pathname === '/' || pathname === '/index.html') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>PlayME MediaServer</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background: linear-gradient(135deg, #0052A5, #003366);
+                    color: white;
+                    margin: 0;
+                    padding: 40px;
+                    min-height: 100vh;
+                }
+                .container {
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 12px;
+                    padding: 30px;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255,255,255,0.2);
+                }
+                h1 { margin-top: 0; }
+                .stat {
+                    background: rgba(255,255,255,0.1);
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    margin: 8px 0;
+                }
+                code {
+                    background: rgba(0,0,0,0.3);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                }
+                a { color: #44BBFF; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎵 PlayME MediaServer</h1>
+                <div class="stat">Canciones en catálogo: <strong>${catalog.length}</strong></div>
+                <div class="stat">Artistas: <strong>${[...new Set(catalog.map(s => s.artist))].length}</strong></div>
+                <div class="stat">Álbumes: <strong>${[...new Set(catalog.map(s => s.album))].length}</strong></div>
+                <h3>API Endpoints:</h3>
+                <ul>
+                    <li><a href="/catalog?page=0&size=5">/catalog?page=0&size=5</a></li>
+                    <li><a href="/catalog/count">/catalog/count</a></li>
+                    <li><a href="/catalog/artists">/catalog/artists</a></li>
+                    <li><a href="/catalog/albums">/catalog/albums</a></li>
+                    <li><a href="/song/1">/song/1</a></li>
+                </ul>
+                <h3>Directorios:</h3>
+                <div class="stat">Música: <code>./music/</code></div>
+                <div class="stat">Portadas: <code>./covers/</code></div>
+                <div class="stat">Catálogo: <code>./catalog.json</code></div>
+            </div>
+        </body>
+        </html>
+        `);
+        return;
+    }
+
+    // 404
+    res.writeHead(404);
+    res.end('Not found');
+});
+
+function sendJSON(res, data) {
+    const json = JSON.stringify(data);
+    res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': Buffer.byteLength(json)
+    });
+    res.end(json);
+}
+
+// Iniciar
+loadCatalog();
+
+server.listen(PORT, '0.0.0.0', () => {
+    const interfaces = require('os').networkInterfaces();
+    console.log(`\n🎵 PlayME MediaServer iniciado en puerto ${PORT}`);
+    console.log(`\nDirecciones disponibles:`);
+    console.log(`  http://localhost:${PORT}`);
+    
+    Object.values(interfaces).forEach(iface => {
+        iface.forEach(addr => {
+            if (addr.family === 'IPv4' && !addr.internal) {
+                console.log(`  http://${addr.address}:${PORT}`);
+            }
+        });
+    });
+    
+    console.log(`\nConfigura esta IP en la app PlayME (Ajustes > Servidor)`);
+    console.log(`Canciones en catálogo: ${catalog.length}`);
+});

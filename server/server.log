@@ -1,0 +1,34 @@
+[start-with-ngrok] Iniciando servidor Node.js en puerto 4000...
+
+🎵 PlayME MediaServer iniciado en puerto 4000
+
+Direcciones disponibles:
+  http://localhost:4000
+  http://192.168.0.28:4000
+  http://172.18.0.1:4000
+  http://172.28.0.1:4000
+  http://172.19.0.1:4000
+
+Panel admin: http://localhost:4000/admin
+Usuario: admin
+
+Recuerda colocar tu cover por defecto en: uploads/covers/default.jpg
+[start-with-ngrok] Servidor listo en http://localhost:4000
+[start-with-ngrok] Iniciando ngrok...
+[start-with-ngrok] Settings.java actualizado: http://heteromorphic-squarrosely-vernice.ngrok-free.dev
+
+═══════════════════════════════════════════
+  PlayME MediaServer expuesto
+═══════════════════════════════════════════
+  Local:    http://localhost:4000
+  ngrok:    http://heteromorphic-squarrosely-vernice.ngrok-free.dev
+  Settings: /home/alanxio/NetBeansProjects/PlayME/src/playme/Settings.java
+═══════════════════════════════════════════
+
+Recuerda hacer Clean & Build en NetBeans antes de ejecutar la app.
+Pulsa Ctrl+C para detener el servidor y ngrok.
+
+
+[start-with-ngrok] Cerrando procesos...
+
+[start-with-ngrok] Cerrando procesos...

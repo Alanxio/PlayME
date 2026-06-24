@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PlayME MediaServer</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="container">
+        <h1>Dashboard</h1>
+
+        <div class="stats">
+            <div class="stat-card">
+                <strong><%= stats.songs %></strong>
+                <span>Canciones</span>
+            </div>
+            <div class="stat-card">
+                <strong><%= stats.artists %></strong>
+                <span>Artistas</span>
+            </div>
+            <div class="stat-card">
+                <strong><%= stats.albums %></strong>
+                <span>Álbumes</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/admin/songs" class="btn btn-primary">Gestionar canciones</a>
+            <a href="/admin/artists" class="btn">Artistas</a>
+            <a href="/admin/albums" class="btn">Álbumes</a>
+            <a href="/admin/songs/new" class="btn">Subir nueva canción</a>
+        </div>
+    </div>
+</body>
+</html>

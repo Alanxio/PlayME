@@ -1,0 +1,7 @@
+MIDlet-1: PlayME, , playme.MusicPlayerMIDlet
+MIDlet-Vendor: alanxio
+MIDlet-Version: 1.0.0
+MIDlet-Name: PlayME
+MIDlet-Permissions: javax.microedition.io.Connector.http
+MicroEdition-Configuration: CLDC-1.1
+MicroEdition-Profile: MIDP-2.0
