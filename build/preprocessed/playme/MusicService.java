@@ -1,7 +1,6 @@
 package playme;
 
 import java.io.InputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import javax.microedition.io.Connector;
@@ -10,6 +9,9 @@ import javax.microedition.media.Manager;
 import javax.microedition.media.Player;
 import javax.microedition.media.PlayerListener;
 import javax.microedition.media.control.VolumeControl;
+import javax.microedition.rms.RecordStore;
+import javax.microedition.rms.RecordStoreException;
+import javax.microedition.rms.RecordStoreFullException;
 
 /**
  * Servicio de reproduccion de audio.
@@ -77,9 +79,9 @@ public class MusicService implements PlayerListener {
         if (listener != null) listener.onPlaybackBuffering();
 
         try {
-            // 3. Opcion B de prueba: descarga completa a memoria
+            // 3. Descarga completa a RecordStore (RMS) distribuido y reproduce desde ahi
             String contentType = (mimeType != null && mimeType.length() > 0) ? mimeType : "audio/mpeg";
-            player = createPlayerFromMemory(songId, quality, contentType);
+            player = createPlayerFromStorage(songId, quality, contentType);
 
             player.addPlayerListener(this);
             player.realize();
@@ -113,22 +115,24 @@ public class MusicService implements PlayerListener {
         }
     }
 
+
+
     /**
-     * Opcion B de diagnostico: descarga el audio completo a memoria
-     * y crea el Player desde un ByteArrayInputStream.
-     * La descarga se realiza por chunks de 64 KB usando HTTP Range Requests
-     * para evitar el limite de tamaño de respuesta HTTP del Nokia Series 40.
-     * El tamano total se obtiene del header Content-Range del primer chunk,
-     * evitando asi el metodo HEAD que falla en algunos firmwares S40.
-     * Si el archivo es mayor a MAX_MEMORY_SIZE, lanza IOException.
+     * Descarga el audio completo a RecordStore (RMS) distribuido por chunks
+     * de 32 KB usando HTTP Range Requests. Cada chunk se guarda en un
+     * RecordStore independiente (audio_chunk_000, audio_chunk_001, ...) siguiendo
+     * el patron de MahoMaps/mm-v1. Esto evita los limites de tamano de un
+     * unico RecordStore y no requiere permisos de FileConnection.
+     * El tamano total se obtiene del header Content-Range del primer chunk.
+     * Si el archivo es mayor a MAX_RMS_TOTAL_SIZE, lanza IOException.
      */
-    private Player createPlayerFromMemory(int songId, int quality, String contentType) throws Exception {
-        final int MAX_MEMORY_SIZE = 600 * 1024; // 600 KB maximo para evitar OutOfMemory
-        final int CHUNK_SIZE = 64 * 1024;       // 64 KB por chunk
+    private Player createPlayerFromStorage(int songId, int quality, String contentType) throws Exception {
+        final int MAX_RMS_TOTAL_SIZE = 2 * 1024 * 1024; // 2 MB limite total en RMS
+        final int CHUNK_SIZE = 32 * 1024;               // 32 KB por chunk (mismo tamano que tiles)
         final int MAX_RETRIES = 3;
 
         String url = client.getStreamUrl(songId, quality);
-        System.out.println("[MusicService] Opcion B chunks: " + url);
+        System.out.println("[MusicService] RMS chunks: " + url);
 
         // 1. Descargar primer chunk con Range para obtener Content-Range/total
         int[] totalSizeHolder = new int[1];
@@ -136,45 +140,65 @@ public class MusicService implements PlayerListener {
         int totalSize = totalSizeHolder[0];
         System.out.println("[MusicService] totalSize=" + totalSize + " firstChunk=" + firstChunk.length);
 
-        if (totalSize > MAX_MEMORY_SIZE) {
+        if (totalSize > MAX_RMS_TOTAL_SIZE) {
             throw new IOException("ARCHIVO_DEMASIADO_GRANDE " + totalSize);
         }
         if (totalSize <= 0) {
             throw new IOException("SIN_CONTENT_LENGTH");
         }
 
-        // 2. Descargar resto de chunks
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(totalSize);
-        baos.write(firstChunk, 0, firstChunk.length);
-        int downloaded = firstChunk.length;
-        int chunkIndex = 1;
-
-        while (downloaded < totalSize) {
-            int start = downloaded;
-            int end = start + CHUNK_SIZE - 1;
-            if (end >= totalSize) {
-                end = totalSize - 1;
-            }
-
-            byte[] chunk = downloadChunk(url, contentType, start, end, chunkIndex, MAX_RETRIES);
-            baos.write(chunk, 0, chunk.length);
-            downloaded += chunk.length;
-            chunkIndex++;
-
-            System.out.println("[MusicService] chunk " + chunkIndex + " done: " + downloaded + "/" + totalSize);
-        }
-
-        // 3. Crear player desde memoria
-        byte[] audioData = baos.toByteArray();
-        baos.close();
-        baos = null;
+        // 2. Limpiar chunks anteriores
+        RecordStoreInputStream.clearAllChunks();
         System.gc();
 
-        ByteArrayInputStream bais = new ByteArrayInputStream(audioData);
-        Player player = Manager.createPlayer(bais, contentType);
-        player.prefetch();
-        System.out.println("[MusicService] Player creado desde memoria, total=" + audioData.length);
-        return player;
+        // 3. Guardar primer chunk en su propio RecordStore
+        RecordStore rs = RecordStore.openRecordStore(RecordStoreInputStream.chunkName(0), true);
+        rs.addRecord(firstChunk, 0, firstChunk.length);
+        rs.closeRecordStore();
+        rs = null;
+
+        int downloaded = firstChunk.length;
+        int chunkIndex = 1;
+        System.out.println("[MusicService] chunk 0 stored in RMS: " + downloaded + "/" + totalSize);
+
+        try {
+            // 4. Descargar y guardar resto de chunks
+            while (downloaded < totalSize) {
+                int start = downloaded;
+                int end = start + CHUNK_SIZE - 1;
+                if (end >= totalSize) {
+                    end = totalSize - 1;
+                }
+
+                byte[] chunk = downloadChunk(url, contentType, start, end, chunkIndex, MAX_RETRIES);
+                String rmsName = RecordStoreInputStream.chunkName(chunkIndex);
+                rs = RecordStore.openRecordStore(rmsName, true);
+                rs.addRecord(chunk, 0, chunk.length);
+                rs.closeRecordStore();
+                rs = null;
+
+                downloaded += chunk.length;
+                chunkIndex++;
+
+                System.out.println("[MusicService] chunk " + (chunkIndex - 1) + " stored in RMS: " + downloaded + "/" + totalSize);
+            }
+
+            // 5. Crear player desde RecordStoreInputStream
+            System.gc();
+            RecordStoreInputStream rsis = new RecordStoreInputStream(totalSize);
+            currentStream = rsis;
+            Player player = Manager.createPlayer(rsis, contentType);
+            player.prefetch();
+            System.out.println("[MusicService] Player creado desde RMS, total=" + totalSize);
+            return player;
+
+        } catch (RecordStoreFullException e) {
+            RecordStoreInputStream.clearAllChunks();
+            throw new IOException("RMS_LLENO " + totalSize);
+        } catch (RecordStoreException e) {
+            RecordStoreInputStream.clearAllChunks();
+            throw new IOException("RMS_ERROR " + e.getMessage());
+        }
     }
 
     /**
@@ -378,6 +402,9 @@ public class MusicService implements PlayerListener {
             } catch (Exception e) {}
             currentStream = null;
         }
+
+        // Limpiar chunks de RMS residuales
+        RecordStoreInputStream.clearAllChunks();
 
         // Forzar limpieza de memoria
         System.gc();

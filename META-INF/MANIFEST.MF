@@ -2,4 +2,4 @@ MIDlet-1: PlayME, , playme.MusicPlayerMIDlet
 MIDlet-Vendor: alanxio
 MIDlet-Version: 1.0.0
 MIDlet-Name: PlayME
-MIDlet-Permissions: javax.microedition.io.Connector.http
+MIDlet-Permissions: javax.microedition.io.Connector.http, javax.microedition.io.Connector.file.write, javax.microedition.io.Connector.file.read

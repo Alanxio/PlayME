@@ -1,5 +1,5 @@
 MIDlet-1: PlayME, , playme.MusicPlayerMIDlet
-MIDlet-Jar-Size: 54874
+MIDlet-Jar-Size: 58679
 MIDlet-Jar-URL: PlayME.jar
 MIDlet-Name: PlayME
 MIDlet-Permissions: javax.microedition.io.Connector.http
