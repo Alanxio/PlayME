@@ -14,9 +14,8 @@ import javax.microedition.rms.RecordStoreException;
 import javax.microedition.rms.RecordStoreFullException;
 
 /**
- * Servicio de reproduccion de audio.
- * Gestiona el ciclo de vida del Player MMAPI:
- * stop -> close -> gc -> create -> prefetch -> start
+ * Servicio de reproduccion de audio. Gestiona el ciclo de vida del Player
+ * MMAPI: stop -> close -> gc -> create -> prefetch -> start
  */
 public class MusicService implements PlayerListener {
 
@@ -40,11 +39,17 @@ public class MusicService implements PlayerListener {
     private boolean doubleSpeed = false;
 
     public interface MusicServiceListener {
+
         void onPlaybackStarted();
+
         void onPlaybackStopped();
+
         void onPlaybackBuffering();
+
         void onPlaybackError(String error);
+
         void onPlaybackComplete();
+
         void onDownloadProgress(int percent, int downloaded, int total);
     }
 
@@ -57,8 +62,8 @@ public class MusicService implements PlayerListener {
     }
 
     /**
-     * Reproduce una cancion por ID.
-     * Primero limpia el player anterior.
+     * Reproduce una cancion por ID. Primero limpia el player anterior.
+     *
      * @param mimeType tipo MIME del audio (audio/mpeg, audio/amr, etc.)
      */
     public void playSong(final int songId, final int quality, final String mimeType) {
@@ -77,7 +82,9 @@ public class MusicService implements PlayerListener {
         // 2. Preparar reproduccion
         currentSongId = songId;
         state = STATE_BUFFERING;
-        if (listener != null) listener.onPlaybackBuffering();
+        if (listener != null) {
+            listener.onPlaybackBuffering();
+        }
 
         try {
             // 3. Descarga completa a RecordStore (RMS) distribuido y reproduce desde ahi
@@ -105,33 +112,37 @@ public class MusicService implements PlayerListener {
             player.start();
             state = STATE_PLAYING;
 
-            if (listener != null) listener.onPlaybackStarted();
+            if (listener != null) {
+                listener.onPlaybackStarted();
+            }
 
         } catch (OutOfMemoryError oom) {
             state = STATE_ERROR;
             System.out.println("[MusicService] OutOfMemoryError en playSongInternal");
             stopAndCleanup();
             System.gc();
-            if (listener != null) listener.onPlaybackError("OutOfMemoryError");
+            if (listener != null) {
+                listener.onPlaybackError("OutOfMemoryError");
+            }
         } catch (Exception e) {
             state = STATE_ERROR;
             String errorDetail = formatError(e);
             System.out.println("[MusicService] playSongInternal error: " + errorDetail);
             stopAndCleanup();
-            if (listener != null) listener.onPlaybackError(errorDetail);
+            if (listener != null) {
+                listener.onPlaybackError(errorDetail);
+            }
         }
     }
 
-
-
     /**
-     * Descarga el audio completo a RecordStore (RMS) distribuido por chunks
-     * de 32 KB usando HTTP Range Requests. Cada chunk se guarda en un
-     * RecordStore independiente (audio_chunk_000, audio_chunk_001, ...) siguiendo
-     * el patron de MahoMaps/mm-v1. Esto evita los limites de tamano de un
-     * unico RecordStore y no requiere permisos de FileConnection.
-     * El tamano total se obtiene del header Content-Range del primer chunk.
-     * Si el archivo es mayor a MAX_RMS_TOTAL_SIZE, lanza IOException.
+     * Descarga el audio completo a RecordStore (RMS) distribuido por chunks de
+     * 32 KB usando HTTP Range Requests. Cada chunk se guarda en un RecordStore
+     * independiente (audio_chunk_000, audio_chunk_001, ...) siguiendo el patron
+     * de MahoMaps/mm-v1. Esto evita los limites de tamano de un unico
+     * RecordStore y no requiere permisos de FileConnection. El tamano total se
+     * obtiene del header Content-Range del primer chunk. Si el archivo es mayor
+     * a MAX_RMS_TOTAL_SIZE, lanza IOException.
      */
     private Player createPlayerFromStorage(int songId, int quality, String contentType) throws Exception {
         final int MAX_RMS_TOTAL_SIZE = 1 * 1024 * 1024; // 1 MB limite total en RMS
@@ -215,9 +226,10 @@ public class MusicService implements PlayerListener {
     }
 
     /**
-     * Descarga el primer chunk (bytes 0-CHUNK_SIZE-1) con Range.
-     * Devuelve los bytes descargados y deja el tamano total en totalSizeHolder[0].
-     * Si el servidor ignora Range y devuelve 200 OK, usa todo el cuerpo como fallback.
+     * Descarga el primer chunk (bytes 0-CHUNK_SIZE-1) con Range. Devuelve los
+     * bytes descargados y deja el tamano total en totalSizeHolder[0]. Si el
+     * servidor ignora Range y devuelve 200 OK, usa todo el cuerpo como
+     * fallback.
      */
     private byte[] downloadFirstChunk(String url, String contentType, int chunkSize, int maxRetries, int[] totalSizeHolder) throws IOException {
         IOException lastError = null;
@@ -242,20 +254,22 @@ public class MusicService implements PlayerListener {
                 // Fallback: servidor ignoro Range y envio todo el archivo
                 if (rc == HttpConnection.HTTP_OK) {
                     int len = (int) conn.getLength();
-                    if (len <= 0) len = 50 * 1024;
+                    if (len <= 0) {
+                        len = 50 * 1024;
+                    }
                     baos = new ByteArrayOutputStream(len);
                     is = conn.openInputStream();
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    baos.write(buffer, 0, bytesRead);
-                }
-                byte[] result = baos.toByteArray();
-                totalSizeHolder[0] = result.length;
-                buffer = null;
-                baos = null;
-                System.out.println("[MusicService] firstChunk fallback 200, size=" + result.length);
-                return result;
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = is.read(buffer)) != -1) {
+                        baos.write(buffer, 0, bytesRead);
+                    }
+                    byte[] result = baos.toByteArray();
+                    totalSizeHolder[0] = result.length;
+                    buffer = null;
+                    baos = null;
+                    System.out.println("[MusicService] firstChunk fallback 200, size=" + result.length);
+                    return result;
                 }
 
                 if (rc != 206) {
@@ -282,7 +296,9 @@ public class MusicService implements PlayerListener {
                 totalSizeHolder[0] = totalSize;
 
                 int expected = chunkSize;
-                if (expected > totalSize) expected = totalSize;
+                if (expected > totalSize) {
+                    expected = totalSize;
+                }
                 int len = (int) conn.getLength();
                 if (len <= 0 || len > expected) {
                     len = expected;
@@ -306,8 +322,18 @@ public class MusicService implements PlayerListener {
                 lastError = e;
                 System.out.println("[MusicService] firstChunk attempt " + attempt + " failed: " + formatError(e));
             } finally {
-                try { if (is != null) is.close(); } catch (Exception ex) {}
-                try { if (conn != null) conn.close(); } catch (Exception ex) {}
+                try {
+                    if (is != null) {
+                        is.close();
+                    }
+                } catch (Exception ex) {
+                }
+                try {
+                    if (conn != null) {
+                        conn.close();
+                    }
+                } catch (Exception ex) {
+                }
             }
         }
 
@@ -315,8 +341,8 @@ public class MusicService implements PlayerListener {
     }
 
     /**
-     * Descarga un rango de bytes usando Range: bytes=start-end.
-     * Reintentando hasta maxRetries veces ante errores de red.
+     * Descarga un rango de bytes usando Range: bytes=start-end. Reintentando
+     * hasta maxRetries veces ante errores de red.
      */
     private byte[] downloadChunk(String url, String contentType, int start, int end, int chunkIndex, int maxRetries) throws IOException {
         IOException lastError = null;
@@ -363,8 +389,18 @@ public class MusicService implements PlayerListener {
                 lastError = e;
                 System.out.println("[MusicService] chunk " + chunkIndex + " attempt " + attempt + " failed: " + formatError(e));
             } finally {
-                try { if (is != null) is.close(); } catch (Exception ex) {}
-                try { if (conn != null) conn.close(); } catch (Exception ex) {}
+                try {
+                    if (is != null) {
+                        is.close();
+                    }
+                } catch (Exception ex) {
+                }
+                try {
+                    if (conn != null) {
+                        conn.close();
+                    }
+                } catch (Exception ex) {
+                }
             }
         }
 
@@ -374,8 +410,12 @@ public class MusicService implements PlayerListener {
     private void notifyDownloadProgress(int downloaded, int total) {
         if (listener != null && total > 0) {
             int percent = (int) ((long) downloaded * 100 / total);
-            if (percent < 0) percent = 0;
-            if (percent > 100) percent = 100;
+            if (percent < 0) {
+                percent = 0;
+            }
+            if (percent > 100) {
+                percent = 100;
+            }
             listener.onDownloadProgress(percent, downloaded, total);
         }
     }
@@ -389,23 +429,34 @@ public class MusicService implements PlayerListener {
         return cls;
     }
 
-    /** Pausa/Reanuda la reproduccion */
+    /**
+     * Pausa/Reanuda la reproduccion
+     */
     public void togglePause() {
-        if (player == null) return;
+        if (player == null) {
+            return;
+        }
         try {
             if (state == STATE_PAUSED) {
                 player.start();
                 state = STATE_PLAYING;
-                if (listener != null) listener.onPlaybackStarted();
+                if (listener != null) {
+                    listener.onPlaybackStarted();
+                }
             } else if (state == STATE_PLAYING) {
                 player.stop();
                 state = STATE_PAUSED;
-                if (listener != null) listener.onPlaybackStopped();
+                if (listener != null) {
+                    listener.onPlaybackStopped();
+                }
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
     }
 
-    /** Detiene y limpia todo */
+    /**
+     * Detiene y limpia todo
+     */
     public void stopAndCleanup() {
         try {
             state = STATE_IDLE;
@@ -416,10 +467,12 @@ public class MusicService implements PlayerListener {
                     if (player.getState() == Player.STARTED) {
                         player.stop();
                     }
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                }
                 try {
                     player.close();
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                }
                 player = null;
             }
 
@@ -428,7 +481,8 @@ public class MusicService implements PlayerListener {
             if (currentStream != null) {
                 try {
                     currentStream.close();
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                }
                 currentStream = null;
             }
         } finally {
@@ -441,23 +495,35 @@ public class MusicService implements PlayerListener {
         }
     }
 
-    /** Avanza o retrocede N segundos */
+    /**
+     * Avanza o retrocede N segundos
+     */
     public void seek(int deltaSec) {
-        if (player == null) return;
+        if (player == null) {
+            return;
+        }
         try {
             long current = player.getMediaTime();
             long target = current + ((long) deltaSec * 1000000L);
-            if (target < 0) target = 0;
-            if (duration > 0 && target > duration) target = duration;
+            if (target < 0) {
+                target = 0;
+            }
+            if (duration > 0 && target > duration) {
+                target = duration;
+            }
             player.setMediaTime(target);
         } catch (Exception e) {
             // seek no soportado en algunos dispositivos
         }
     }
 
-    /** Obtiene posicion actual en segundos */
+    /**
+     * Obtiene posicion actual en segundos
+     */
     public int getCurrentPosition() {
-        if (player == null) return 0;
+        if (player == null) {
+            return 0;
+        }
         try {
             return (int) (player.getMediaTime() / 1000000L);
         } catch (Exception e) {
@@ -465,19 +531,26 @@ public class MusicService implements PlayerListener {
         }
     }
 
-    /** Obtiene duracion en segundos */
+    /**
+     * Obtiene duracion en segundos
+     */
     public int getDurationSeconds() {
-        if (duration <= 0) return 0;
+        if (duration <= 0) {
+            return 0;
+        }
         return (int) (duration / 1000000L);
     }
 
-    /** Establece volumen (0-100) */
+    /**
+     * Establece volumen (0-100)
+     */
     public void setVolume(int vol) {
         this.volume = vol;
         if (volumeCtrl != null) {
             try {
                 volumeCtrl.setLevel(vol);
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
         }
     }
 
@@ -485,13 +558,16 @@ public class MusicService implements PlayerListener {
         return volume;
     }
 
-    /** Intenta poner velocidad x2 */
+    /**
+     * Intenta poner velocidad x2
+     */
     public void toggleDoubleSpeed() {
-        if (player == null) return;
+        if (player == null) {
+            return;
+        }
         try {
-            javax.microedition.media.control.RateControl rc =
-                (javax.microedition.media.control.RateControl)
-                player.getControl("RateControl");
+            javax.microedition.media.control.RateControl rc
+                    = (javax.microedition.media.control.RateControl) player.getControl("RateControl");
             if (rc != null) {
                 if (doubleSpeed) {
                     rc.setRate(100000); // 100% = velocidad normal
@@ -506,24 +582,44 @@ public class MusicService implements PlayerListener {
         }
     }
 
-    public boolean isPlaying() { return state == STATE_PLAYING; }
-    public boolean isPaused() { return state == STATE_PAUSED; }
-    public boolean isBuffering() { return state == STATE_BUFFERING; }
-    public int getState() { return state; }
-    public boolean isDoubleSpeed() { return doubleSpeed; }
-    public int getCurrentSongId() { return currentSongId; }
+    public boolean isPlaying() {
+        return state == STATE_PLAYING;
+    }
+
+    public boolean isPaused() {
+        return state == STATE_PAUSED;
+    }
+
+    public boolean isBuffering() {
+        return state == STATE_BUFFERING;
+    }
+
+    public int getState() {
+        return state;
+    }
+
+    public boolean isDoubleSpeed() {
+        return doubleSpeed;
+    }
+
+    public int getCurrentSongId() {
+        return currentSongId;
+    }
 
     // --- PlayerListener ---
-
     public void playerUpdate(Player p, String event, Object data) {
         if (event.equals(PlayerListener.END_OF_MEDIA)) {
             state = STATE_IDLE;
-            if (listener != null) listener.onPlaybackComplete();
+            if (listener != null) {
+                listener.onPlaybackComplete();
+            }
         } else if (event.equals(PlayerListener.ERROR)) {
             state = STATE_ERROR;
             String detail = (data != null && data instanceof String) ? (String) data : "unknown";
             System.out.println("[MusicService] playerUpdate ERROR: " + detail);
-            if (listener != null) listener.onPlaybackError("PlayerError: " + detail);
+            if (listener != null) {
+                listener.onPlaybackError("PlayerError: " + detail);
+            }
         }
     }
 }

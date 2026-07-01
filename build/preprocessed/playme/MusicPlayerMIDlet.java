@@ -5,14 +5,11 @@ import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
 /**
- * MIDlet principal de PlayME.
- * Orquesta todas las pantallas y servicios.
+ * MIDlet principal de PlayME. Orquesta todas las pantallas y servicios.
  *
- * Flujo:
- * 1. startApp() -> carga settings -> crea servicios -> muestra PlayerCanvas
- * 2. PlayerCanvas es la pantalla principal
- * 3. LibraryCanvas para navegar la biblioteca
- * 4. SettingsCanvas para ajustes
+ * Flujo: 1. startApp() -> carga settings -> crea servicios -> muestra
+ * PlayerCanvas 2. PlayerCanvas es la pantalla principal 3. LibraryCanvas para
+ * navegar la biblioteca 4. SettingsCanvas para ajustes
  *
  * La navegacion entre pantallas se hace via Display.setCurrent()
  */
@@ -108,28 +105,33 @@ public class MusicPlayerMIDlet extends MIDlet implements MusicService.MusicServi
     }
 
     // --- Navegacion entre pantallas ---
-
-    /** Muestra el reproductor */
+    /**
+     * Muestra el reproductor
+     */
     public void showPlayer() {
         display.setCurrent(playerCanvas);
     }
 
-    /** Muestra la biblioteca */
+    /**
+     * Muestra la biblioteca
+     */
     public void showLibrary() {
         libraryCanvas.applyTheme();
         display.setCurrent(libraryCanvas);
     }
 
-    /** Muestra ajustes */
+    /**
+     * Muestra ajustes
+     */
     public void showSettings() {
         settingsCanvas.applyTheme();
         display.setCurrent(settingsCanvas);
     }
 
     /**
-     * Reproduce la cancion seleccionada en la biblioteca.
-     * Llamado desde LibraryCanvas cuando el usuario elige una cancion.
-     * Calcula el bitrate segun perfil y duracion de la cancion.
+     * Reproduce la cancion seleccionada en la biblioteca. Llamado desde
+     * LibraryCanvas cuando el usuario elige una cancion. Calcula el bitrate
+     * segun perfil y duracion de la cancion.
      */
     public void playSelectedSong() {
         Song song = playlist.getCurrentSong();
@@ -139,14 +141,16 @@ public class MusicPlayerMIDlet extends MIDlet implements MusicService.MusicServi
             playerCanvas.updateCurrentSong(song);
             int bitrate = settings.calculateBitrate(song.duration);
             System.out.println("[MIDlet] playSelectedSong id=" + song.id
-                + " dur=" + song.duration + "s profile=" + settings.qualityProfile
-                + " bitrate=" + bitrate + "k");
+                    + " dur=" + song.duration + "s profile=" + settings.qualityProfile
+                    + " bitrate=" + bitrate + "k");
             musicService.playSong(song.id, bitrate, song.mimeType);
             display.setCurrent(playerCanvas);
         }
     }
 
-    /** Notificacion de cambio de tema */
+    /**
+     * Notificacion de cambio de tema
+     */
     public void onThemeChanged() {
         playerCanvas.applyTheme();
         libraryCanvas.applyTheme();
@@ -154,7 +158,6 @@ public class MusicPlayerMIDlet extends MIDlet implements MusicService.MusicServi
     }
 
     // --- MusicServiceListener ---
-
     public void onPlaybackStarted() {
         // Reproduccion exitosa: resetear estado de OOM
         pendingSong = null;
@@ -185,7 +188,7 @@ public class MusicPlayerMIDlet extends MIDlet implements MusicService.MusicServi
                 int newBitrate = settings.calculateBitrate(pendingSong.duration);
                 String profileName = Settings.PROFILE_LABELS[settings.qualityProfile];
                 System.out.println("[MIDlet] OOM retry #" + oomRetryCount
-                    + " -> " + profileName + " " + newBitrate + "k");
+                        + " -> " + profileName + " " + newBitrate + "k");
                 playerCanvas.setLoading("Sin memoria, bajando a " + profileName + "...");
                 settings.save();
 
@@ -194,7 +197,10 @@ public class MusicPlayerMIDlet extends MIDlet implements MusicService.MusicServi
                 final int bitrate = newBitrate;
                 new Thread() {
                     public void run() {
-                        try { Thread.sleep(1500); } catch (Exception e) {}
+                        try {
+                            Thread.sleep(1500);
+                        } catch (Exception e) {
+                        }
                         musicService.playSong(song.id, bitrate, song.mimeType);
                     }
                 }.start();
@@ -210,7 +216,10 @@ public class MusicPlayerMIDlet extends MIDlet implements MusicService.MusicServi
         // Auto-limpiar despues de 10 segundos para poder leer el error completo
         new Thread() {
             public void run() {
-                try { Thread.sleep(10000); } catch (Exception e) {}
+                try {
+                    Thread.sleep(10000);
+                } catch (Exception e) {
+                }
                 Song current = playlist.getCurrentSong();
                 if (current != null) {
                     playerCanvas.updateCurrentSong(current);

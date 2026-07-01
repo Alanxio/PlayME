@@ -76,7 +76,10 @@ public class RecordStoreInputStream extends InputStream {
 
     private void loadNextRecord() throws RecordStoreException {
         if (currentRs != null) {
-            try { currentRs.closeRecordStore(); } catch (Exception e) {}
+            try {
+                currentRs.closeRecordStore();
+            } catch (Exception e) {
+            }
             currentRs = null;
         }
 
@@ -132,8 +135,12 @@ public class RecordStoreInputStream extends InputStream {
         int availableInRecord = currentRecord.length - currentOffset;
         int remainingTotal = totalBytes - bytesRead;
         int canRead = len;
-        if (canRead > availableInRecord) canRead = availableInRecord;
-        if (canRead > remainingTotal) canRead = remainingTotal;
+        if (canRead > availableInRecord) {
+            canRead = availableInRecord;
+        }
+        if (canRead > remainingTotal) {
+            canRead = remainingTotal;
+        }
 
         System.arraycopy(currentRecord, currentOffset, b, off, canRead);
         currentOffset += canRead;
@@ -147,7 +154,10 @@ public class RecordStoreInputStream extends InputStream {
 
     public void close() throws IOException {
         if (currentRs != null) {
-            try { currentRs.closeRecordStore(); } catch (Exception e) {}
+            try {
+                currentRs.closeRecordStore();
+            } catch (Exception e) {
+            }
             currentRs = null;
         }
     }

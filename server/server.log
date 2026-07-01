@@ -2287,3 +2287,93 @@ Recuerda colocar tu cover por defecto en: uploads/covers/default.jpg
 [stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=950272-956081 client=31.4.136.226
 [stream] id=17 RANGE start=950272 end=956081 chunk=5810
 [stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=0-32767 client=178.139.164.129
+[stream] id=17 RANGE start=0 end=32767 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=32768-65535 client=178.139.164.129
+[stream] id=17 RANGE start=32768 end=65535 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=65536-98303 client=178.139.164.129
+[stream] id=17 RANGE start=65536 end=98303 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=98304-131071 client=178.139.164.129
+[stream] id=17 RANGE start=98304 end=131071 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=131072-163839 client=178.139.164.129
+[stream] id=17 RANGE start=131072 end=163839 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=163840-196607 client=178.139.164.129
+[stream] id=17 RANGE start=163840 end=196607 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=196608-229375 client=178.139.164.129
+[stream] id=17 RANGE start=196608 end=229375 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=229376-262143 client=178.139.164.129
+[stream] id=17 RANGE start=229376 end=262143 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=262144-294911 client=178.139.164.129
+[stream] id=17 RANGE start=262144 end=294911 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=294912-327679 client=178.139.164.129
+[stream] id=17 RANGE start=294912 end=327679 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=327680-360447 client=178.139.164.129
+[stream] id=17 RANGE start=327680 end=360447 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=360448-393215 client=178.139.164.129
+[stream] id=17 RANGE start=360448 end=393215 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=393216-425983 client=178.139.164.129
+[stream] id=17 RANGE start=393216 end=425983 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=425984-458751 client=178.139.164.129
+[stream] id=17 RANGE start=425984 end=458751 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=458752-491519 client=178.139.164.129
+[stream] id=17 RANGE start=458752 end=491519 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=491520-524287 client=178.139.164.129
+[stream] id=17 RANGE start=491520 end=524287 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=524288-557055 client=178.139.164.129
+[stream] id=17 RANGE start=524288 end=557055 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=557056-589823 client=178.139.164.129
+[stream] id=17 RANGE start=557056 end=589823 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=589824-622591 client=178.139.164.129
+[stream] id=17 RANGE start=589824 end=622591 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=622592-655359 client=178.139.164.129
+[stream] id=17 RANGE start=622592 end=655359 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=655360-688127 client=178.139.164.129
+[stream] id=17 RANGE start=655360 end=688127 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=688128-720895 client=178.139.164.129
+[stream] id=17 RANGE start=688128 end=720895 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=720896-753663 client=178.139.164.129
+[stream] id=17 RANGE start=720896 end=753663 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=753664-786431 client=178.139.164.129
+[stream] id=17 RANGE start=753664 end=786431 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=786432-819199 client=178.139.164.129
+[stream] id=17 RANGE start=786432 end=819199 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=819200-851967 client=178.139.164.129
+[stream] id=17 RANGE start=819200 end=851967 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=851968-884735 client=178.139.164.129
+[stream] id=17 RANGE start=851968 end=884735 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=884736-917503 client=178.139.164.129
+[stream] id=17 RANGE start=884736 end=917503 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=917504-950271 client=178.139.164.129
+[stream] id=17 RANGE start=917504 end=950271 chunk=32768
+[stream] id=17 RANGE completed
+[stream] id=17 quality=32 file=song-1782853733213-6999-32k.mp3 mime=audio/mpeg size=956082 range=bytes=950272-956081 client=178.139.164.129
+[stream] id=17 RANGE start=950272 end=956081 chunk=5810
+[stream] id=17 RANGE completed
