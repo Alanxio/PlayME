@@ -3,7 +3,13 @@ const path = require('path');
 const Jimp = require('jimp');
 const Song = require('../models/Song');
 const Album = require('../models/Album');
+const SongFile = require('../models/SongFile');
 const { MUSIC_DIR, COVERS_DIR, getMimeTypeFromFilename } = require('../utils/fileHelper');
+
+function coverFileExists(filename) {
+    if (!filename) return false;
+    return fs.existsSync(path.join(COVERS_DIR, filename));
+}
 
 function sendJSON(res, data) {
     const json = JSON.stringify(data);
@@ -16,11 +22,21 @@ function sendJSON(res, data) {
 }
 
 function resolveCover(song) {
-    if (song.cover) return song.cover;
+    // 1. Cover propio de la canción
+    if (song.cover && coverFileExists(song.cover)) return song.cover;
 
+    // 2. Cover del álbum
     if (song.album_id) {
         const album = Album.getById(song.album_id);
-        if (album && album.cover) return album.cover;
+        if (album && album.cover && coverFileExists(album.cover)) return album.cover;
+
+        // 3. Fallback: cover de alguna canción del mismo álbum
+        if (album && album.title) {
+            const albumSongs = Song.getAll({ album: album.title, size: 1000 });
+            for (const s of albumSongs) {
+                if (s.cover && coverFileExists(s.cover)) return s.cover;
+            }
+        }
     }
 
     return process.env.DEFAULT_COVER || 'default.jpg';
@@ -86,7 +102,7 @@ async function getCover(req, res) {
     const filename = decodeURIComponent(req.params.filename);
     const filepath = path.join(COVERS_DIR, path.basename(filename));
     const requestedSize = parseInt(req.query.size, 10) || 0;
-    const thumbSize = requestedSize > 0 && requestedSize <= 128 ? requestedSize : 0;
+    const thumbSize = requestedSize > 0 && requestedSize <= 256 ? requestedSize : 0;
 
     const coverPath = fs.existsSync(filepath) ? filepath : null;
     const defaultCover = process.env.DEFAULT_COVER || 'default.jpg';
@@ -133,8 +149,18 @@ function streamSong(req, res) {
         return res.end('Song not found');
     }
 
-    const filepath = path.join(MUSIC_DIR, song.filename);
-    const contentType = song.mime_type || getMimeTypeFromFilename(song.filename);
+    // Seleccionar archivo por calidad solicitada, con fallback
+    const requestedQuality = parseInt(req.query.quality, 10) || 64;
+    let songFile = SongFile.getBestForSong(id, requestedQuality);
+
+    // Fallback legacy: si no hay entradas en song_files, usar song.filename
+    let filename = song.filename;
+    if (songFile) {
+        filename = songFile.filename;
+    }
+
+    const filepath = path.join(MUSIC_DIR, filename);
+    const contentType = song.mime_type || getMimeTypeFromFilename(filename);
 
     if (!fs.existsSync(filepath)) {
         console.log(`[stream] id=${id} NOT_FOUND file=${filepath}`);
@@ -147,7 +173,7 @@ function streamSong(req, res) {
     const rangeHeader = req.headers.range;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    console.log(`[stream] id=${id} file=${song.filename} mime=${contentType} size=${fileSize} range=${rangeHeader || 'none'} client=${clientIp}`);
+    console.log(`[stream] id=${id} quality=${requestedQuality} file=${filename} mime=${contentType} size=${fileSize} range=${rangeHeader || 'none'} client=${clientIp}`);
 
     // HEAD: solo informacion del archivo
     if (req.method === 'HEAD') {

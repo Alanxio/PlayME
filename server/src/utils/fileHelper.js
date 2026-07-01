@@ -33,10 +33,15 @@ function safeDelete(filename, dir) {
     }
 }
 
-function deleteSongFiles(song) {
+function deleteSongFiles(song, qualityFiles) {
     safeDelete(song.filename, MUSIC_DIR);
     if (song.cover) {
         safeDelete(song.cover, COVERS_DIR);
+    }
+    if (qualityFiles) {
+        for (let i = 0; i < qualityFiles.length; i++) {
+            safeDelete(qualityFiles[i], MUSIC_DIR);
+        }
     }
 }
 

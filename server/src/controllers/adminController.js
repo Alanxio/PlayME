@@ -6,13 +6,13 @@ const Artist = require('../models/Artist');
 const Album = require('../models/Album');
 const { parseAudioMetadata } = require('../utils/id3Parser');
 const { processCover, processCoverBuffer } = require('../utils/imageProcessor');
+const SongFile = require('../models/SongFile');
 const { transcodeForNokia } = require('../utils/audioTranscoder');
 const { resolveSongCover, getCoverIcon } = require('../utils/coverHelper');
 const { MUSIC_DIR, COVERS_DIR, TMP_COVERS_DIR, deleteSongFiles, getMimeTypeFromFilename, generateUniqueFilename } = require('../utils/fileHelper');
 
-const AUDIO_FORMAT = (process.env.AUDIO_FORMAT || 'mp3').toLowerCase();
-const OUTPUT_EXT = AUDIO_FORMAT === 'amr' ? '.amr' : '.mp3';
-const OUTPUT_MIME = AUDIO_FORMAT === 'amr' ? 'audio/amr' : 'audio/mpeg';
+const OUTPUT_EXT = '.mp3';
+const OUTPUT_MIME = 'audio/mpeg';
 
 function getDashboard(req, res) {
     const totalSongs = Song.count();
@@ -36,9 +36,16 @@ function getSongs(req, res) {
     const total = Song.count();
     const totalPages = Math.ceil(total / size);
 
+    // Precargar calidades disponibles por canción
+    const songsWithQualities = songs.map(song => {
+        const files = SongFile.getAllBySong(song.id);
+        song.qualities = files.map(f => f.quality);
+        return song;
+    });
+
     res.render('songs', {
         user: req.session.username,
-        songs,
+        songs: songsWithQualities,
         page,
         totalPages,
         total,
@@ -60,6 +67,47 @@ function newSongForm(req, res) {
     });
 }
 
+/**
+ * Genera las versiones de audio por calidad que quepan en el límite RMS del cliente.
+ * Devuelve un objeto { success: true, files: [{quality, filename, fileSize}] }
+ * o { success: false, error: string, tooLong?: boolean }.
+ */
+async function generateQualityFiles(inputPath, songId, duration) {
+    const fittingQualities = SongFile.getFittingQualities(duration);
+
+    if (fittingQualities.length === 0) {
+        const maxSeconds = Math.floor(SongFile.getMaxRmsSize() * 8 / (32 * 1000));
+        const maxMinutes = Math.floor(maxSeconds / 60);
+        const maxRemaining = maxSeconds % 60;
+        return {
+            success: false,
+            tooLong: true,
+            error: `La canción dura ${duration}s y no cabe en la memoria del móvil (límite 1 MB). Máximo permitido a 32 kbps: ${maxMinutes}m ${maxRemaining}s.`
+        };
+    }
+
+    const files = [];
+    for (const quality of fittingQualities) {
+        const filename = `song-${Date.now()}-${Math.floor(Math.random() * 10000)}-${quality}k${OUTPUT_EXT}`;
+        const outputPath = path.join(MUSIC_DIR, filename);
+        const result = await transcodeForNokia(inputPath, outputPath, `${quality}k`);
+
+        if (!result.success) {
+            // Limpiar archivos ya generados en caso de fallo
+            for (const f of files) {
+                const p = path.join(MUSIC_DIR, f.filename);
+                try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) {}
+            }
+            return { success: false, error: `Error transcodificando ${quality}k: ${result.error}` };
+        }
+
+        SongFile.create(songId, quality, filename, result.fileSize || 0);
+        files.push({ quality, filename, fileSize: result.fileSize || 0 });
+    }
+
+    return { success: true, files };
+}
+
 async function createSong(req, res) {
     try {
         const musicFile = req.files && req.files.audio ? req.files.audio[0] : null;
@@ -77,22 +125,10 @@ async function createSong(req, res) {
 
         const metadata = await parseAudioMetadata(musicFile.path);
 
-        // Transcodificar automáticamente a formato compatible con Nokia 6111
-        const transcodedFilename = 'song-' + Date.now() + '-' + Math.floor(Math.random() * 10000) + OUTPUT_EXT;
-        const transcodedPath = path.join(MUSIC_DIR, transcodedFilename);
-        const transcodeResult = await transcodeForNokia(musicFile.path, transcodedPath);
-
-        if (!transcodeResult.success) {
-            throw new Error('Error al transcodificar el audio: ' + transcodeResult.error);
-        }
-
-        // Eliminar archivo original subido por multer
-        try { fs.unlinkSync(musicFile.path); } catch (e) {}
-
         const title = req.body.title && req.body.title.trim() ? req.body.title.trim() : (metadata.title || 'Sin título');
         const artistName = req.body.artist && req.body.artist.trim() ? req.body.artist.trim() : (metadata.artist || '');
         const albumName = req.body.album && req.body.album.trim() ? req.body.album.trim() : (metadata.album || '');
-        const duration = req.body.duration ? parseInt(req.body.duration) : (transcodeResult.duration || metadata.duration || 0);
+        const duration = req.body.duration ? parseInt(req.body.duration) : (metadata.duration || 0);
 
         let artist = null;
         let album = null;
@@ -104,6 +140,32 @@ async function createSong(req, res) {
         if (albumName) {
             album = Album.findOrCreate(albumName, artist ? artist.id : null);
         }
+
+        // Creamos la canción primero para obtener el ID
+        const song = Song.create({
+            title,
+            artistId: artist ? artist.id : null,
+            albumId: album ? album.id : null,
+            duration,
+            cover: null,
+            filename: '', // legacy, se mantiene vacío o se rellena con la mejor calidad
+            mimeType: OUTPUT_MIME
+        });
+
+        // Generar versiones por calidad
+        const qualityResult = await generateQualityFiles(musicFile.path, song.id, duration);
+        if (!qualityResult.success) {
+            // Rollback: borrar canción creada
+            Song.delete(song.id);
+            throw new Error(qualityResult.error);
+        }
+
+        // Rellenar filename legacy con la mejor calidad generada
+        const bestFile = qualityResult.files[qualityResult.files.length - 1];
+        Song.update(song.id, { filename: bestFile.filename });
+
+        // Eliminar archivo original subido por multer
+        try { fs.unlinkSync(musicFile.path); } catch (e) {}
 
         let coverFilename = null;
 
@@ -118,15 +180,9 @@ async function createSong(req, res) {
             }
         }
 
-        Song.create({
-            title,
-            artistId: artist ? artist.id : null,
-            albumId: album ? album.id : null,
-            duration,
-            cover: coverFilename,
-            filename: transcodedFilename,
-            mimeType: OUTPUT_MIME
-        });
+        if (coverFilename) {
+            Song.update(song.id, { cover: coverFilename });
+        }
 
         res.redirect('/admin/songs');
     } catch (err) {
@@ -208,30 +264,45 @@ async function updateSong(req, res) {
         if (musicFile) {
             const metadata = await parseAudioMetadata(musicFile.path);
 
-            // Transcodificar automáticamente a formato compatible con Nokia 6111
-            const transcodedFilename = 'song-' + Date.now() + '-' + Math.floor(Math.random() * 10000) + OUTPUT_EXT;
-            const transcodedPath = path.join(MUSIC_DIR, transcodedFilename);
-            const transcodeResult = await transcodeForNokia(musicFile.path, transcodedPath);
-
-            if (!transcodeResult.success) {
-                throw new Error('Error al transcodificar el audio: ' + transcodeResult.error);
-            }
-
             if (!updates.title || updates.title === 'Sin título') updates.title = metadata.title || 'Sin título';
 
-            // Eliminar archivo original subido por multer y el anterior
-            try { fs.unlinkSync(musicFile.path); } catch (e) {}
-            const oldPath = path.join(MUSIC_DIR, song.filename);
-            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            const newDuration = !req.body.duration
+                ? (metadata.duration || song.duration)
+                : updates.duration;
 
-            updates.filename = transcodedFilename;
-            updates.mimeType = OUTPUT_MIME;
-            if (!req.body.duration) {
-                updates.duration = transcodeResult.duration || metadata.duration || song.duration;
+            // Generar nuevas calidades
+            const qualityResult = await generateQualityFiles(musicFile.path, id, newDuration);
+            if (!qualityResult.success) {
+                throw new Error(qualityResult.error);
             }
 
+            // Borrar archivos de calidad antiguos
+            const oldFiles = SongFile.getAllBySong(id);
+            for (const f of oldFiles) {
+                const oldPath = path.join(MUSIC_DIR, f.filename);
+                try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch (e) {}
+            }
+            SongFile.deleteBySong(id);
+
+            // Guardar nuevos archivos en BD
+            for (const f of qualityResult.files) {
+                SongFile.create(id, f.quality, f.filename, f.fileSize);
+            }
+
+            // Actualizar filename legacy con la mejor calidad
+            const bestFile = qualityResult.files[qualityResult.files.length - 1];
+            updates.filename = bestFile.filename;
+            updates.mimeType = OUTPUT_MIME;
+            updates.duration = newDuration;
+
+            // Eliminar archivo original subido por multer
+            try { fs.unlinkSync(musicFile.path); } catch (e) {}
+
             if (!coverFile && metadata.coverFilename && !updates.cover) {
-                updates.cover = metadata.coverFilename;
+                const originalCoverPath = path.join(COVERS_DIR, metadata.coverFilename);
+                if (fs.existsSync(originalCoverPath)) {
+                    updates.cover = await processCover(originalCoverPath);
+                }
             }
         }
 
@@ -264,7 +335,9 @@ function deleteSong(req, res) {
     const song = Song.getById(id);
 
     if (song) {
-        deleteSongFiles(song);
+        const qualityFiles = SongFile.getAllBySong(id).map(f => f.filename);
+        deleteSongFiles(song, qualityFiles);
+        SongFile.deleteBySong(id);
         Song.delete(id);
     }
 

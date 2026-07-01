@@ -20,7 +20,7 @@ async function startServer() {
     await initDb();
 
     // Inicializar admin y migraciones
-    init();
+    await init();
 
     // Configuración de vistas
     app.set('view engine', 'ejs');

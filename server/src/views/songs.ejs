@@ -26,7 +26,7 @@
                         <th>Título</th>
                         <th>Artista</th>
                         <th>Álbum</th>
-                        <th>Formato</th>
+                        <th>Calidades</th>
                         <th>Duración</th>
                         <th>Cover</th>
                         <th>Acciones</th>
@@ -40,7 +40,15 @@
                             <td><%= song.title %></td>
                             <td><%= song.artist || '-' %></td>
                             <td><%= song.album || '-' %></td>
-                            <td><%= song.mime_type ? song.mime_type.replace('audio/', '') : 'mp3' %></td>
+                            <td>
+                                <% if (song.qualities && song.qualities.length > 0) { %>
+                                    <% song.qualities.forEach(q => { %>
+                                        <span class="badge badge-small"><%= q %>k</span>
+                                    <% }); %>
+                                <% } else { %>
+                                    <span class="text-muted">-</span>
+                                <% } %>
+                            </td>
                             <td><%= song.duration ? song.duration + 's' : '-' %></td>
                             <td>
                                 <span class="cover-icon" title="<%= coverInfo.label %>">

@@ -45,6 +45,7 @@ public class MusicService implements PlayerListener {
         void onPlaybackBuffering();
         void onPlaybackError(String error);
         void onPlaybackComplete();
+        void onDownloadProgress(int percent, int downloaded, int total);
     }
 
     public MusicService(ServerClient client) {
@@ -106,6 +107,12 @@ public class MusicService implements PlayerListener {
 
             if (listener != null) listener.onPlaybackStarted();
 
+        } catch (OutOfMemoryError oom) {
+            state = STATE_ERROR;
+            System.out.println("[MusicService] OutOfMemoryError en playSongInternal");
+            stopAndCleanup();
+            System.gc();
+            if (listener != null) listener.onPlaybackError("OutOfMemoryError");
         } catch (Exception e) {
             state = STATE_ERROR;
             String errorDetail = formatError(e);
@@ -127,8 +134,8 @@ public class MusicService implements PlayerListener {
      * Si el archivo es mayor a MAX_RMS_TOTAL_SIZE, lanza IOException.
      */
     private Player createPlayerFromStorage(int songId, int quality, String contentType) throws Exception {
-        final int MAX_RMS_TOTAL_SIZE = 2 * 1024 * 1024; // 2 MB limite total en RMS
-        final int CHUNK_SIZE = 32 * 1024;               // 32 KB por chunk (mismo tamano que tiles)
+        final int MAX_RMS_TOTAL_SIZE = 1 * 1024 * 1024; // 1 MB limite total en RMS
+        final int CHUNK_SIZE = 32 * 1024;                           // 32 KB por chunk
         final int MAX_RETRIES = 3;
 
         String url = client.getStreamUrl(songId, quality);
@@ -160,6 +167,7 @@ public class MusicService implements PlayerListener {
         int downloaded = firstChunk.length;
         int chunkIndex = 1;
         System.out.println("[MusicService] chunk 0 stored in RMS: " + downloaded + "/" + totalSize);
+        notifyDownloadProgress(downloaded, totalSize);
 
         try {
             // 4. Descargar y guardar resto de chunks
@@ -179,6 +187,11 @@ public class MusicService implements PlayerListener {
 
                 downloaded += chunk.length;
                 chunkIndex++;
+
+                // Liberar memoria del chunk y notificar progreso
+                chunk = null;
+                System.gc();
+                notifyDownloadProgress(downloaded, totalSize);
 
                 System.out.println("[MusicService] chunk " + (chunkIndex - 1) + " stored in RMS: " + downloaded + "/" + totalSize);
             }
@@ -232,15 +245,17 @@ public class MusicService implements PlayerListener {
                     if (len <= 0) len = 50 * 1024;
                     baos = new ByteArrayOutputStream(len);
                     is = conn.openInputStream();
-                    byte[] buffer = new byte[2048];
-                    int bytesRead;
-                    while ((bytesRead = is.read(buffer)) != -1) {
-                        baos.write(buffer, 0, bytesRead);
-                    }
-                    byte[] result = baos.toByteArray();
-                    totalSizeHolder[0] = result.length;
-                    System.out.println("[MusicService] firstChunk fallback 200, size=" + result.length);
-                    return result;
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+                byte[] result = baos.toByteArray();
+                totalSizeHolder[0] = result.length;
+                buffer = null;
+                baos = null;
+                System.out.println("[MusicService] firstChunk fallback 200, size=" + result.length);
+                return result;
                 }
 
                 if (rc != 206) {
@@ -275,13 +290,15 @@ public class MusicService implements PlayerListener {
 
                 baos = new ByteArrayOutputStream(len);
                 is = conn.openInputStream();
-                byte[] buffer = new byte[2048];
+                byte[] buffer = new byte[1024];
                 int bytesRead;
                 while ((bytesRead = is.read(buffer)) != -1) {
                     baos.write(buffer, 0, bytesRead);
                 }
 
                 byte[] result = baos.toByteArray();
+                buffer = null;
+                baos = null;
                 System.out.println("[MusicService] firstChunk 206 got " + result.length + " total=" + totalSize);
                 return result;
 
@@ -330,13 +347,15 @@ public class MusicService implements PlayerListener {
 
                 baos = new ByteArrayOutputStream(len);
                 is = conn.openInputStream();
-                byte[] buffer = new byte[2048];
+                byte[] buffer = new byte[1024];
                 int bytesRead;
                 while ((bytesRead = is.read(buffer)) != -1) {
                     baos.write(buffer, 0, bytesRead);
                 }
 
                 byte[] result = baos.toByteArray();
+                buffer = null;
+                baos = null;
                 System.out.println("[MusicService] chunk " + chunkIndex + " attempt " + attempt + " got " + result.length + " bytes");
                 return result;
 
@@ -350,6 +369,15 @@ public class MusicService implements PlayerListener {
         }
 
         throw lastError;
+    }
+
+    private void notifyDownloadProgress(int downloaded, int total) {
+        if (listener != null && total > 0) {
+            int percent = (int) ((long) downloaded * 100 / total);
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+            listener.onDownloadProgress(percent, downloaded, total);
+        }
     }
 
     private String formatError(Exception e) {
@@ -379,35 +407,38 @@ public class MusicService implements PlayerListener {
 
     /** Detiene y limpia todo */
     public void stopAndCleanup() {
-        state = STATE_IDLE;
-        doubleSpeed = false;
+        try {
+            state = STATE_IDLE;
+            doubleSpeed = false;
 
-        if (player != null) {
-            try {
-                if (player.getState() == Player.STARTED) {
-                    player.stop();
-                }
-            } catch (Exception e) {}
-            try {
-                player.close();
-            } catch (Exception e) {}
-            player = null;
+            if (player != null) {
+                try {
+                    if (player.getState() == Player.STARTED) {
+                        player.stop();
+                    }
+                } catch (Exception e) {}
+                try {
+                    player.close();
+                } catch (Exception e) {}
+                player = null;
+            }
+
+            volumeCtrl = null;
+
+            if (currentStream != null) {
+                try {
+                    currentStream.close();
+                } catch (Exception e) {}
+                currentStream = null;
+            }
+        } finally {
+            // Limpiar chunks de RMS residuales SIEMPRE, incluso si
+            // algo fallo al cerrar el player o el stream
+            RecordStoreInputStream.clearAllChunks();
+
+            // Forzar limpieza de memoria
+            System.gc();
         }
-
-        volumeCtrl = null;
-
-        if (currentStream != null) {
-            try {
-                currentStream.close();
-            } catch (Exception e) {}
-            currentStream = null;
-        }
-
-        // Limpiar chunks de RMS residuales
-        RecordStoreInputStream.clearAllChunks();
-
-        // Forzar limpieza de memoria
-        System.gc();
     }
 
     /** Avanza o retrocede N segundos */

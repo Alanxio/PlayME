@@ -156,21 +156,29 @@ public class RecordStoreInputStream extends InputStream {
      * Borra todos los RecordStores que empiecen por CHUNK_PREFIX.
      */
     public static void clearAllChunks() {
+        int deleted = 0;
+        int errors = 0;
         try {
             String[] all = RecordStore.listRecordStores();
-            if (all == null) return;
+            if (all == null) {
+                System.out.println("[RMS] clearAllChunks: no hay RecordStores");
+                return;
+            }
             for (int i = 0; i < all.length; i++) {
                 if (all[i] != null && all[i].startsWith(CHUNK_PREFIX)) {
                     try {
                         RecordStore.deleteRecordStore(all[i]);
+                        deleted++;
                     } catch (Exception e) {
-                        // ignorar
+                        errors++;
+                        System.out.println("[RMS] error borrando " + all[i] + ": " + e.getMessage());
                     }
                 }
             }
         } catch (Exception e) {
-            // ignorar
+            System.out.println("[RMS] clearAllChunks error general: " + e.getMessage());
         }
+        System.out.println("[RMS] clearAllChunks: borrados=" + deleted + " errores=" + errors);
     }
 
     /**

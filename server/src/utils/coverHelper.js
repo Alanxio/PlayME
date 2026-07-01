@@ -1,9 +1,18 @@
+const fs = require('fs');
+const path = require('path');
 const Album = require('../models/Album');
+const { COVERS_DIR } = require('./fileHelper');
 
 const DEFAULT_COVER = process.env.DEFAULT_COVER || 'default.jpg';
 
+function coverFileExists(filename) {
+    if (!filename) return false;
+    return fs.existsSync(path.join(COVERS_DIR, filename));
+}
+
 function resolveSongCover(song) {
-    if (song.cover) {
+    // 1. Cover propio de la canción
+    if (song.cover && coverFileExists(song.cover)) {
         return {
             filename: song.cover,
             origin: 'own',
@@ -11,9 +20,10 @@ function resolveSongCover(song) {
         };
     }
 
+    // 2. Cover del álbum
     if (song.album_id) {
         const album = Album.getById(song.album_id);
-        if (album && album.cover) {
+        if (album && album.cover && coverFileExists(album.cover)) {
             return {
                 filename: album.cover,
                 origin: 'album',

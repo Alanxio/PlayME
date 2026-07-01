@@ -50,6 +50,15 @@ async function initialize() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS song_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            song_id INTEGER NOT NULL,
+            quality INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            file_size INTEGER DEFAULT 0,
+            UNIQUE(song_id, quality)
+        );
+
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,

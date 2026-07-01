@@ -11,7 +11,7 @@ import javax.microedition.lcdui.Graphics;
  * - Mezcla (On / Off)
  * - Ecualizador (Normal / Bass / Rock / Pop / Clasica)
  * - Tema (Aero / Oscuro / Nokia)
- * - Streaming (Calidad / Precarga / Portadas)
+ * - Streaming (Perfil de calidad / Precarga / Portadas)
  * - Teclas (info de controles)
  */
 public class SettingsCanvas extends Canvas {
@@ -27,7 +27,7 @@ public class SettingsCanvas extends Canvas {
 
     // Sub-menu streaming
     private static final String[] STREAMING_ITEMS = {
-        "Calidad", "Precarga", "Mostrar portadas"
+        "Perfil calidad", "Precarga", "Mostrar portadas"
     };
 
     // Estados
@@ -141,8 +141,7 @@ public class SettingsCanvas extends Canvas {
                 drawKeysInfo(g, w, h);
                 break;
             case STATE_QUALITY:
-                drawOptionList(g, w, h, "Calidad",
-                               Settings.QUALITY_LABELS, settings.getQualityIndex());
+                drawProfileList(g, w, h);
                 break;
             case STATE_PRELOAD:
                 drawOptionList(g, w, h, "Precarga",
@@ -204,7 +203,7 @@ public class SettingsCanvas extends Canvas {
             case 1: return settings.shuffle ? "Si" : "No";
             case 2: return Settings.EQ_LABELS[settings.equalizer];
             case 3: return Settings.THEME_LABELS[settings.theme];
-            case 4: return settings.quality + "k";
+            case 4: return Settings.PROFILE_LABELS[settings.qualityProfile];
             default: return null;
         }
     }
@@ -240,6 +239,51 @@ public class SettingsCanvas extends Canvas {
         }
     }
 
+    /**
+     * Dibuja la lista de perfiles de calidad con descripcion.
+     * Cada perfil muestra su nombre y un rango de bitrates orientativo.
+     */
+    private void drawProfileList(Graphics g, int w, int h) {
+        g.setFont(fontMedium);
+        g.setColor(colorTextShadow);
+        g.drawString("Perfil calidad", w / 2 + 1, 3 + 1, Graphics.TOP | Graphics.HCENTER);
+        g.setColor(colorText);
+        g.drawString("Perfil calidad", w / 2, 3, Graphics.TOP | Graphics.HCENTER);
+
+        // Descripciones cortas de cada perfil
+        String[] descriptions = {
+            "Mejor posible",
+            "96-128 kbps",
+            "48-64 kbps",
+            "32 kbps"
+        };
+
+        int startY = 28;
+        int itemH = fontSmall.getHeight() + 8;
+
+        for (int i = 0; i < Settings.PROFILE_LABELS.length; i++) {
+            int y = startY + i * itemH;
+
+            if (i == subIndex) {
+                g.setColor(colorSelected);
+                g.fillRoundRect(4, y, w - 8, itemH - 2, 4, 4);
+                g.setColor(colorAccent);
+                g.drawLine(6, y + 1, w - 6, y + 1);
+            }
+
+            g.setFont(fontSmall);
+            g.setColor(i == subIndex ? colorText : colorSoftkey);
+
+            // Indicador de seleccion actual
+            String prefix = (i == settings.qualityProfile) ? "\u2022 " : "  ";
+            g.drawString(prefix + Settings.PROFILE_LABELS[i], 12, y + 2, Graphics.TOP | Graphics.LEFT);
+
+            // Descripcion a la derecha
+            g.setColor(colorAccent);
+            g.drawString(descriptions[i], w - 12, y + 2, Graphics.TOP | Graphics.RIGHT);
+        }
+    }
+
     /** Menu de streaming */
     private void drawStreamingMenu(Graphics g, int w, int h) {
         g.setFont(fontMedium);
@@ -252,7 +296,7 @@ public class SettingsCanvas extends Canvas {
         int itemH = fontSmall.getHeight() + 8;
 
         String[] values = {
-            Settings.QUALITY_LABELS[settings.getQualityIndex()],
+            Settings.PROFILE_LABELS[settings.qualityProfile],
             Settings.PRELOAD_LABELS[settings.preload],
             settings.showCovers ? "Si" : "No"
         };
@@ -363,7 +407,7 @@ public class SettingsCanvas extends Canvas {
                 break;
             case STATE_QUALITY:
                 handleOptionSelect(gameAction, keyCode,
-                                   Settings.QUALITY_LABELS.length);
+                                   Settings.PROFILE_LABELS.length);
                 break;
             case STATE_PRELOAD:
                 handleOptionSelect(gameAction, keyCode,
@@ -413,7 +457,7 @@ public class SettingsCanvas extends Canvas {
         switch (subIndex) {
             case 0:
                 state = STATE_QUALITY;
-                subIndex = settings.getQualityIndex();
+                subIndex = settings.qualityProfile;
                 break;
             case 1:
                 state = STATE_PRELOAD;
@@ -456,7 +500,7 @@ public class SettingsCanvas extends Canvas {
                 midlet.onThemeChanged();
                 break;
             case STATE_QUALITY:
-                settings.setQualityByIndex(subIndex);
+                settings.qualityProfile = subIndex;
                 break;
             case STATE_PRELOAD:
                 settings.preload = subIndex;
